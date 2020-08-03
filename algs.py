@@ -169,7 +169,6 @@ class LinUCB:
         
         # update parameters
         x_a = self.curr_context[action]
-        #self.A[action] += x_a @ x_a.T
         self.b[action] += reward * self.curr_context[action]
 
         # avoid inversion using Sherman-Morrison
