@@ -83,5 +83,5 @@ if __name__ == "__main__":
     plt.show()
 
     # show details of UCB and LinUCB
-    ucb1.show_log()
+    #ucb1.show_log()
     linucb.show_log()

@@ -114,10 +114,10 @@ class LinUCB:
         self.action_choice = np.zeros(self.K)
         self.round_num = 0
         # parameters
-        self.precision_mat = {}
-        self.weights = {}
+        self.theta = {}
         self.b = {}
         self.curr_context = {}
+        self.A_inv = {}
         # for logging
         self.log_upper_bound = defaultdict(list)
         self.log_pred_mean = defaultdict(list)
@@ -126,24 +126,24 @@ class LinUCB:
         
 
     def get_action(self, cust_context):
-        ub, context, pred_mean, pred_var = {}, {}, {}, {}
+        ub, pred_mean, pred_var = {}, {}, {}
         alpha = 1 + 1/(self.round_num + 1)
 
         # loop over K arms
+        best_action = None
         for k in range(self.K):
             self.curr_context[k] = np.expand_dims(
                 np.r_[cust_context.to_numpy(), self.offer_cont[k].to_numpy()], 
                 axis=1
             )
             d = self.curr_context[k].size
-            if k not in self.precision_mat:
-                self.precision_mat[k] = np.eye(d)
+            if k not in self.A_inv:
                 self.b[k] = np.zeros((d,1))
+                self.A_inv[k] = np.eye(d)
 
-            A_inv = np.linalg.inv(self.precision_mat[k])
-            self.weights[k] = A_inv @ self.b[k]
-            pred_var[k] = self.curr_context[k].T @ A_inv @ self.curr_context[k]
-            pred_mean[k] = self.weights[k].T @ self.curr_context[k]
+            self.theta[k] = self.A_inv[k] @ self.b[k]
+            pred_var[k] = self.curr_context[k].T @ self.A_inv[k] @ self.curr_context[k]
+            pred_mean[k] = self.theta[k].T @ self.curr_context[k]
             ub[k] = pred_mean[k] + alpha * np.sqrt(pred_var[k])
         
         # select the random maximal action (if more than one)
@@ -154,10 +154,6 @@ class LinUCB:
 
         self.action_choice[best_action] += 1
         self.round_num += 1
-
-        # update parameters
-        self.precision_mat[best_action] += self.curr_context[best_action] @ \
-            self.curr_context[best_action].T
 
         # log upper bound, predictive variance and reward
         for k in range(self.K):
@@ -170,8 +166,16 @@ class LinUCB:
         
     def set_reward(self, action, reward):
         self.reward_sum[action] += reward
+        
         # update parameters
+        x_a = self.curr_context[action]
+        #self.A[action] += x_a @ x_a.T
         self.b[action] += reward * self.curr_context[action]
+
+        # avoid inversion using Sherman-Morrison
+        self.A_inv[action] = self.A_inv[action] - (self.A_inv[action] @ x_a) @ (x_a.T @ self.A_inv[action]) / \
+            (1 + x_a.T @ self.A_inv[action] @ x_a)
+        
     
     def show_log(self):
         fig, ax = plt.subplots(1,3, figsize=(15,5))
