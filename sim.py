@@ -46,7 +46,7 @@ class Simulator:
 
 if __name__ == "__main__":
     # number of rounds
-    T = 1000
+    T = 2000
 
     # offer settings
     offer_cont = [
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     cum_reward = sim.simulate(CustomerContext, BuyBehavior, T=T)
     plt.plot(range(1, len(cum_reward)+1), cum_reward, label='0.1-Greedy')
 
-    random = EpsGreedy(eps=0.0, offer_cont=offer_cont)
+    random = EpsGreedy(eps=1.0, offer_cont=offer_cont)
     sim = Simulator(random)
     cum_reward = sim.simulate(CustomerContext, BuyBehavior, T=T)
     plt.plot(range(1, len(cum_reward)+1), cum_reward, label='Random')
